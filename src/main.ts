@@ -1,4 +1,6 @@
 import './style.css';
+import { mountHeader } from './header';
+import { mountFooter } from './footer';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -10,4 +12,6 @@ if (app) {
       <p>Le projet est prêt.</p>
     </main>
   `;
+  mountHeader(app);
+  mountFooter(app);
 }
