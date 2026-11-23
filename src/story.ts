@@ -188,7 +188,6 @@ export const renderStory = () => {
       <div class="story-stack">
         <section class="panel panel--intro" aria-labelledby="story-title">
           <div>
-            <img class="panel-logo" src="/logo_white.png" alt="À Table — By Angelo" width="733" height="511" fetchpriority="high" />
             <h1 id="story-title">${tr('Contactez-nous', 'Contact us')}</h1>
             <p class="panel-subline">${tr(
               'Prenez votre temps et défilez. Plus bas, un formulaire de contact vous attend : racontez-nous votre événement, et nous vous accompagnons.',

@@ -2,10 +2,11 @@ import { lang, switchLang, tr } from './i18n';
 import { getLinks, renderLink } from './links';
 
 /**
- * FR/EN switch in the header bar. French is the left/off side, English the right/on side.
- * Activating it goes through switchLang (stores the choice and reloads into the other language).
+ * FR/EN switch, shown in the menu and the footer. French is the left/off side,
+ * English the right/on side. Every copy is wired by one delegated listener in mountHeader;
+ * activating it goes through switchLang (stores the choice and reloads into the other language).
  */
-const renderLangToggle = () => `
+export const renderLangToggle = () => `
   <button class="lang-toggle" type="button" role="switch" aria-checked="${lang() === 'en'}" aria-label="${tr('Langue : français', 'Language: English')}">
     <span class="lang-toggle-track" aria-hidden="true">
       <span class="lang-toggle-thumb"></span>
@@ -23,7 +24,6 @@ export const mountHeader = (root: HTMLElement) => {
       <a href="${getLinks()[0].href}" class="site-header-logo">
         <img src="/logo_white.png" alt="À Table — By Angelo" />
       </a>
-      ${renderLangToggle()}
       <button class="menu-bars site-header-toggle" type="button" aria-label="${tr('Ouvrir le menu', 'Open the menu')}" aria-expanded="false" aria-controls="site-drawer">
         <span class="bar bar--top" aria-hidden="true"></span>
         <span class="bar bar--middle" aria-hidden="true"></span>
@@ -40,6 +40,7 @@ export const mountHeader = (root: HTMLElement) => {
               .map((link, i) => `<li style="--i: ${i}">${renderLink(link)}</li>`)
               .join('')}
           </ul>
+          <div class="drawer-lang">${renderLangToggle()}</div>
         </nav>
         <div class="drawer-handle" aria-hidden="true"></div>
       </div>
@@ -89,8 +90,9 @@ export const mountHeader = (root: HTMLElement) => {
     link.addEventListener('click', (event) => event.preventDefault());
   });
 
-  root.querySelector<HTMLButtonElement>('.lang-toggle')!.addEventListener('click', () => {
-    switchLang(lang() === 'en' ? 'fr' : 'en');
+  // Menu and footer switches both land here.
+  document.addEventListener('click', (event) => {
+    if ((event.target as Element).closest('.lang-toggle')) switchLang(lang() === 'en' ? 'fr' : 'en');
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && isOpen()) setOpen(false);

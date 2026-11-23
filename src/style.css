@@ -146,7 +146,7 @@ h3 {
   }
 }
 
-/* Very narrow phones: tighter spacing so logo, switch and menu still fit. */
+/* Very narrow phones: slightly tighter spacing. */
 @media (max-width: 379px) {
   .site-header {
     gap: 0.5rem;
@@ -232,8 +232,12 @@ h3 {
   transform: translateY(0);
 }
 
+/* Links on the left, the FR/EN switch on the right, level with the first link. */
 .drawer-inner {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 1rem;
@@ -1024,46 +1028,6 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   }
 }
 
-/* The brand mark at the top of the first screen, centred: the same file and the same dark ink
-   as the header logo over cream, a little larger. While it is in view the header logo is hidden
-   (see mountHeaderLogo); on phones it sits just under the solid header bar. */
-.panel--intro .panel-logo {
-  position: absolute;
-  top: calc(var(--header-clear) + 1.25rem);
-  left: 50%;
-  display: block;
-  width: clamp(6.5rem, 18vw, 10rem);
-  height: auto;
-  margin: 0;
-  filter: brightness(0) opacity(0.85);
-  transform: translateX(-50%);
-}
-
-@media (min-width: 768px) {
-  .panel--intro .panel-logo {
-    top: 1rem;
-  }
-}
-
-@media (max-width: 767px) and (max-height: 700px) {
-  .panel--intro .panel-logo {
-    top: calc(var(--header-clear) + 0.75rem);
-    width: 5.5rem;
-  }
-}
-
-/* Header logo while the big one is on screen: faded out, not focusable by pointer. */
-.site-header-logo {
-  transition:
-    opacity 0.45s ease,
-    visibility 0.45s;
-}
-
-.site-header.is-logo-hidden .site-header-logo {
-  opacity: 0;
-  visibility: hidden;
-}
-
 .panel--intro h1 {
   margin: 0;
   /* Scales with the screen so “Contactez-nous” stays on one line down to 320px phones. */
@@ -1073,10 +1037,13 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 }
 
 .panel-subline {
-  max-width: 30rem;
+  /* A wide, airy measure: about 75 characters a line on desktop. */
+  max-width: 44rem;
   margin: 1.5rem auto 0;
   font-size: clamp(1.05rem, 0.95rem + 0.4vw, 1.25rem);
-  line-height: 1.6;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+  text-wrap: pretty;
   /* Darker olive: plain olive on cream is too faint for body-size text. */
   color: var(--olive-ink);
 }
@@ -1142,7 +1109,10 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 
 /* Beat text and reveals (each runs once, see setupReveals) */
 .beat-text {
-  width: min(100%, 28rem);
+  /* Wide enough that each sentence breaks into a few long lines, not a tower of short ones;
+     balanced so no word is left alone on the last line. */
+  width: min(100%, 42rem);
+  text-wrap: balance;
   margin: 0;
   font-family: var(--font-title);
   font-weight: 700;
@@ -1465,16 +1435,18 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 }
 
 .contact-intro {
-  max-width: 32rem;
+  max-width: 44rem;
   margin: 1rem auto 3.5rem;
   font-size: 1.125rem;
-  line-height: 1.6;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+  text-wrap: pretty;
   text-align: center;
 }
 
 .contact-form,
 .contact-confirm {
-  width: min(100%, 32rem);
+  width: min(100%, 40rem);
   margin: 0 auto;
 }
 
@@ -2251,20 +2223,31 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   }
 }
 
-@media (max-width: 379px) {
-  .lang-toggle .lang-toggle-track {
-    width: 4.75rem;
+/* FR/EN switch: on the right of the menu, and under the links in the footer. */
+.drawer-lang {
+  flex-shrink: 0;
+}
+
+/* Desktop menu: the switch fades in with the links. */
+@media (min-width: 768px) {
+  .drawer-lang {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .drawer-open .drawer-lang {
+    opacity: 1;
+    transition: opacity 0.5s ease 0.14s;
   }
 }
 
-/* FR/EN switch in the header bar. Drawn in the header's foreground colour, so it stays
-   readable on every header theme. French = left/off, English = right/on. */
+/* Drawn in currentColor: dark in the white menu, white in the olive footer.
+   French = left/off, English = right/on. */
 .lang-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  margin-left: auto;
   padding: 4px;
   border: 0;
   border-radius: 9999px;

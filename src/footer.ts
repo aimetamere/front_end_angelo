@@ -1,4 +1,5 @@
 import { tr } from './i18n';
+import { renderLangToggle } from './header';
 import { getLinks, renderLink } from './links';
 
 export const mountFooter = (root: HTMLElement) => {
@@ -17,6 +18,7 @@ export const mountFooter = (root: HTMLElement) => {
               .join('')}
           </ul>
         </nav>
+        ${renderLangToggle()}
       </div>
       <p class="site-footer-copy">© ${new Date().getFullYear()} À Table — By Angelo</p>
     </footer>
