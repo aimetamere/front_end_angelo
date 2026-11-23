@@ -1,0 +1,5 @@
+# Not uploaded to Cloudflare. The site only shows the web copies in photos/web/; the camera
+# originals (15–51 MB each) stay in the repo but are over Cloudflare's 25 MiB per-file limit.
+/photos/*.jpg
+.DS_Store
+**/.DS_Store

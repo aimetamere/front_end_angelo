@@ -60,3 +60,43 @@ export const mountHeaderTheme = (root: HTMLElement) => {
   desktop.addEventListener('change', queue);
   update();
 };
+
+/**
+ * Homepage: the header logo stays hidden while the big logo at the top of the first screen is
+ * visible, and fades in once that one has scrolled away or been covered by the next section
+ * (sticky panels cover it rather than move it, so this checks what is painted on top).
+ */
+export const mountHeaderLogo = (root: HTMLElement) => {
+  const header = root.querySelector<HTMLElement>('.site-header');
+  const big = root.querySelector<HTMLImageElement>('.panel-logo');
+  if (!header || !big) return () => {};
+  let queued = false;
+
+  const update = () => {
+    queued = false;
+    const box = big.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    let visible = false;
+    if (y > 0 && y < window.innerHeight) {
+      const top = document
+        .elementsFromPoint(x, y)
+        .find((el) => !el.closest('.page-loader, .drawer-clip, .drawer-overlay'));
+      visible = top === big;
+    }
+    header.classList.toggle('is-logo-hidden', visible);
+  };
+
+  const queue = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(update);
+  };
+
+  // Start hidden: the page opens on the first screen.
+  header.classList.add('is-logo-hidden');
+  window.addEventListener('scroll', queue, { passive: true });
+  window.addEventListener('resize', queue);
+  queue();
+  return queue;
+};

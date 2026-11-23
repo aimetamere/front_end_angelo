@@ -1,6 +1,6 @@
 import { mountFooter } from './footer';
 import { mountHeader } from './header';
-import { mountHeaderTheme } from './header-theme';
+import { mountHeaderLogo, mountHeaderTheme } from './header-theme';
 import { setLang, storedLang, storeLang, tr } from './i18n';
 import { askLanguage, labelLoader, mountLoader, runGate } from './loader';
 
@@ -31,10 +31,13 @@ export const bootPage = async (app: HTMLElement, { build, beforeReveal }: BootOp
   mountHeader(app);
   mountFooter(app);
   mountHeaderTheme(app);
+  const checkHeaderLogo = mountHeaderLogo(app);
 
   // The overlay stays the first child of #app, covering the header too.
   const overlay = app.querySelector('.page-loader');
   if (overlay) app.prepend(overlay);
 
   await runGate(app, beforeReveal);
+  // The loader covered everything until now; look again at what is actually on screen.
+  checkHeaderLogo();
 };

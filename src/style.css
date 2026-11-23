@@ -133,7 +133,7 @@ h3 {
   --header-fg: var(--color-cream);
 }
 
-/* Desktop: no container. The logo, the language switch and a round menu button float over the
+/* Desktop: no container. The logo, the language switch and the menu button float over the
    page in the colours of the section underneath; the empty bar lets clicks through. */
 @media (min-width: 768px) {
   .site-header {
@@ -143,28 +143,6 @@ h3 {
 
   .site-header > * {
     pointer-events: auto;
-  }
-
-  .site-header-toggle {
-    isolation: isolate;
-  }
-
-  /* The menu button sits on a round chip in the section's colour. */
-  .site-header-toggle::before {
-    content: '';
-    position: absolute;
-    inset: -10px -7px;
-    z-index: -1;
-    border-radius: 50%;
-    background: var(--header-bg);
-    box-shadow: 0 6px 18px rgb(0 0 0 / 14%);
-    transition:
-      background-color 0.45s ease,
-      transform 0.3s ease;
-  }
-
-  .site-header-toggle:hover::before {
-    transform: scale(1.06);
   }
 }
 
@@ -390,8 +368,8 @@ h3 {
     display: none;
   }
 
-  /* Desktop: the menu opens as a rounded card that grows in a circle out of the round
-     menu button, instead of a strip hanging under a bar that is no longer there. */
+  /* Desktop: the menu is a rounded card that unfolds from the menu button. Only opacity and
+     transform move, which the browser animates on the compositor, so it stays smooth. */
   .drawer-clip {
     top: calc(var(--header-bottom, 4.5rem) + 0.25rem);
     right: 1rem;
@@ -405,14 +383,61 @@ h3 {
     padding: 1.75rem 1.5rem;
     border-radius: 1.75rem;
     box-shadow: 0 24px 60px rgb(0 0 0 / 18%);
-    transform: none;
-    clip-path: circle(0 at calc(100% - 1.75rem) -2.5rem);
-    transition: clip-path 0.6s cubic-bezier(0.32, 0.72, 0, 1);
+    opacity: 0;
+    transform: translateY(-0.75rem) scale(0.94);
+    transform-origin: calc(100% - 1.5rem) 0;
+    pointer-events: none;
+    transition:
+      opacity 0.3s ease,
+      transform 0.35s cubic-bezier(0.4, 0, 1, 1);
   }
 
   .drawer-open .drawer {
+    opacity: 1;
     transform: none;
-    clip-path: circle(160% at calc(100% - 1.75rem) -2.5rem);
+    pointer-events: auto;
+    transition:
+      opacity 0.45s ease,
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* The links follow the card in, one after the other. */
+  .drawer-links li {
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .drawer-open .drawer-links li {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.5s ease,
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .drawer-open .drawer-links li:nth-child(1) {
+    transition-delay: 0.08s;
+  }
+
+  .drawer-open .drawer-links li:nth-child(2) {
+    transition-delay: 0.14s;
+  }
+
+  .drawer-open .drawer-links li:nth-child(3) {
+    transition-delay: 0.2s;
+  }
+}
+
+@media (min-width: 768px) and (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawer-open .drawer,
+  .drawer-links li,
+  .drawer-open .drawer-links li {
+    transform: none;
+    transition: none;
   }
 }
 
@@ -454,12 +479,16 @@ h3 {
   color: #fff;
 }
 
+/* Logo centred, links centred under it, copyright centred below. */
 .site-footer-inner {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1.25rem;
+}
+
+.site-footer-inner .site-footer-links {
+  justify-content: center;
 }
 
 .site-footer-logo img {
@@ -977,9 +1006,68 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   color: var(--color-olive);
 }
 
+/* Short phones (iPhone SE and smaller): keep room above the “Défiler” cue at the bottom. */
+@media (max-width: 767px) and (max-height: 700px) {
+  .panel--intro {
+    padding-top: calc(var(--header-clear) + 1rem);
+    padding-bottom: 5.5rem;
+  }
+
+  .panel--intro .panel-subline {
+    margin-top: 1rem;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .panel--intro .panel-subline + .panel-subline {
+    margin-top: 0.75rem;
+  }
+}
+
+/* The brand mark at the top of the first screen, centred: the same file and the same dark ink
+   as the header logo over cream, a little larger. While it is in view the header logo is hidden
+   (see mountHeaderLogo); on phones it sits just under the solid header bar. */
+.panel--intro .panel-logo {
+  position: absolute;
+  top: calc(var(--header-clear) + 1.25rem);
+  left: 50%;
+  display: block;
+  width: clamp(6.5rem, 18vw, 10rem);
+  height: auto;
+  margin: 0;
+  filter: brightness(0) opacity(0.85);
+  transform: translateX(-50%);
+}
+
+@media (min-width: 768px) {
+  .panel--intro .panel-logo {
+    top: 1rem;
+  }
+}
+
+@media (max-width: 767px) and (max-height: 700px) {
+  .panel--intro .panel-logo {
+    top: calc(var(--header-clear) + 0.75rem);
+    width: 5.5rem;
+  }
+}
+
+/* Header logo while the big one is on screen: faded out, not focusable by pointer. */
+.site-header-logo {
+  transition:
+    opacity 0.45s ease,
+    visibility 0.45s;
+}
+
+.site-header.is-logo-hidden .site-header-logo {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .panel--intro h1 {
   margin: 0;
-  font-size: clamp(3.25rem, 1.5rem + 7vw, 8rem);
+  /* Scales with the screen so “Contactez-nous” stays on one line down to 320px phones. */
+  font-size: clamp(2.5rem, 0.5rem + 11vw, 8rem);
   line-height: 0.95;
   color: var(--color-olive);
 }
@@ -1243,6 +1331,21 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 .gallery-column--sticky figure {
   height: auto;
   min-height: 0;
+}
+
+/* Desktop: the header is a floating, transparent layer, so there is no bar to clear. The centre
+   column pins at the gallery's own inset and its three photos stack exactly like the sides. */
+@media (min-width: 768px) {
+  .gallery-column--sticky {
+    top: 0.5rem;
+    align-self: start;
+    grid-template-rows: none;
+    height: auto;
+  }
+
+  .gallery-column--sticky figure {
+    height: clamp(14rem, 30vw, 24rem);
+  }
 }
 
 .chapter-closing {
@@ -2232,13 +2335,8 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
     animation: none;
   }
 
-  .lang-toggle-thumb,
-  .site-header-toggle::before {
+  .lang-toggle-thumb {
     transition: none;
-  }
-
-  .site-header-toggle:hover::before {
-    transform: none;
   }
 
   .lang-prompt-options button {
