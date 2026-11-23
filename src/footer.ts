@@ -20,6 +20,10 @@ export const mountFooter = (root: HTMLElement) => {
         </nav>
         ${renderLangToggle()}
       </div>
+      <ul class="site-footer-legal" aria-label="${tr('Informations légales', 'Legal information')}">
+        <li>${tr('Mentions légales', 'Legal notice')} <span class="site-footer-legal-status">(${tr('en construction', 'under construction')})</span></li>
+        <li>${tr('Protection des données (nLPD)', 'Data protection (Swiss FADP)')} <span class="site-footer-legal-status">(${tr('en construction', 'under construction')})</span></li>
+      </ul>
       <p class="site-footer-copy">© ${new Date().getFullYear()} À Table — By Angelo</p>
     </footer>
   `,

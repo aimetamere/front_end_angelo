@@ -2,14 +2,14 @@ type Theme = 'olive' | 'cream' | 'sage' | 'blue' | 'white' | 'dark';
 
 // Innermost match wins, so a band inside a section can override it.
 const themes: [selector: string, theme: Theme][] = [
-  ['.panel--intro', 'cream'],
+  // The first screen is a photo under a dark veil: light header.
+  ['.panel--intro', 'olive'],
   ['.panel--olive', 'olive'],
   ['.panel--cream', 'cream'],
   ['.marquee', 'cream'],
   ['.chapter-split', 'sage'],
   ['.chapter-stack', 'blue'],
   ['.gallery', 'cream'],
-  ['.chapter-closing', 'olive'],
   ['.contact', 'white'],
   ['.site-footer', 'olive'],
 ];

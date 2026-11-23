@@ -145,7 +145,6 @@ const renderForm = () => `
       </div>
 
       <button class="send-button" type="submit">
-        <span class="send-button-outline" aria-hidden="true"></span>
         <span class="send-state send-state--default">
           <span class="send-icon">${sendIcons.plane}</span>
           <span class="send-label">${letterSpans(tr('Envoyer', 'Send'))}</span>
@@ -187,7 +186,8 @@ export const renderStory = () => {
     <div class="story">
       <div class="story-stack">
         <section class="panel panel--intro" aria-labelledby="story-title">
-          <div>
+          <figure class="panel-photo">${img(p[14], { sizes: '100vw', priority: true })}</figure>
+          <div class="panel-intro-text">
             <h1 id="story-title">${tr('Contactez-nous', 'Contact us')}</h1>
             <p class="panel-subline">${tr(
               'Prenez votre temps et défilez. Plus bas, un formulaire de contact vous attend : racontez-nous votre événement, et nous vous accompagnons.',
@@ -252,8 +252,6 @@ export const renderStory = () => {
           ${[2, 9, 6, 10, 13].map((n) => `<figure>${img(p[n], { sizes: '33vw' })}</figure>`).join('')}
         </div>
       </section>
-
-      <figure class="chapter-closing">${img(p[14], { sizes: '100vw' })}</figure>
 
       ${renderMarquee()}
 

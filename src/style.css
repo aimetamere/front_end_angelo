@@ -37,10 +37,20 @@ textarea {
   font: inherit;
 }
 
+/* Height of the mobile browser bars that slide away (0 on desktop): the large viewport minus the
+   small one. Full-screen story panels are deliberately the large height, so their bottom edge
+   stays hidden behind Safari's bar; anything that must stay visible is lifted by this much. */
+:root {
+  --toolbar: calc(100lvh - 100svh);
+}
+
 html {
   scroll-behavior: smooth;
   /* Cream behind the story: a missed seam matches the intro instead of flashing white. */
   background: var(--color-cream);
+  /* Vertical scrolling and pinch-zoom only: a sideways nudge on a photo never steals the
+     vertical gesture. No overscroll-behavior here, so the iOS rubber-band stays. */
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Phones get no reserved gutter beside the full-bleed panels. */
@@ -87,6 +97,7 @@ h3 {
   justify-content: space-between;
   gap: 0.75rem;
   margin: 0;
+  /* Phones: a 72px bar (0.75rem + 3rem logo + 0.75rem), as deployed. */
   padding: 0.75rem 1rem;
   border-radius: 0;
   background: var(--header-bg);
@@ -160,10 +171,34 @@ h3 {
 
 .site-header-logo img {
   display: block;
+  /* Phones 3rem (a 72px bar), desktop 3.75rem. --header-clear in .story follows the bar. */
   height: 3rem;
   width: auto;
   filter: var(--header-logo-filter);
-  transition: filter 0.45s ease;
+  transform-origin: left center;
+  transition:
+    filter 0.45s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Desktop homepage: large enough for “By Angelo” to read (about 150px tall). The team page has
+   its heading close under the header, so it keeps a smaller first-screen logo. */
+@media (min-width: 768px) {
+  .site-header-logo img {
+    height: 3.75rem;
+    transform-origin: left top;
+  }
+
+  /* First screen: the logo is larger, then settles to its normal size as soon as the page
+     scrolls. A scale, so the bar keeps its height and nothing below moves. Desktop only; on
+     phones the logo keeps one size. */
+  .site-header.is-top .site-header-logo img {
+    transform: scale(2.5);
+  }
+
+  body[data-page='team'] .site-header.is-top .site-header-logo img {
+    transform: scale(1.6);
+  }
 }
 
 .menu-bars {
@@ -188,39 +223,11 @@ h3 {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgb(0 0 0 / 40%);
+  /* No dimming: the page stays as it is. The layer only catches a click outside to close. */
+  background: transparent;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.6s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.drawer-clip {
-  position: fixed;
-  top: calc(var(--header-bottom, 5.25rem) - 6px);
-  left: var(--header-left, 0.75rem);
-  width: var(--header-width, calc(100% - 1.5rem));
-  bottom: 0;
-  z-index: 51;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.drawer {
-  position: relative;
-  max-height: 100%;
-  overflow-y: auto;
-  padding: calc(6px + 1rem) 0 2.5rem;
-  background: #fff;
-  border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px;
-  transform: translateY(-100%);
-  transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: transform;
-  pointer-events: auto;
-}
-
-.drawer-open {
-  overflow: hidden;
+  transition: opacity 0.55s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .drawer-open .drawer-overlay {
@@ -228,19 +235,59 @@ h3 {
   pointer-events: auto;
 }
 
-.drawer-open .drawer {
-  transform: translateY(0);
+/* The menu comes out of the three-line button, toward the left, at every width. The clip's
+   top-right corner is the button (measured in header.ts): right edge on the button's right
+   edge, first line centred on the button. Above the header bar so that first line shows. */
+.drawer-clip {
+  position: fixed;
+  top: calc(var(--menu-top, 2.25rem) - 22px);
+  right: var(--menu-right, 1rem);
+  z-index: 61;
+  width: min(46rem, var(--menu-room, calc(100vw - 2rem)));
+  overflow: hidden;
+  pointer-events: none;
 }
 
-/* Links on the left, the FR/EN switch on the right, level with the first link. */
+/* No card: transparent, no shadow, no corners. Closed it waits just past the button
+   (translateX(100%)), open it sits with its right edge on the button. Only transform moves. */
+.drawer {
+  max-height: calc(100dvh - var(--menu-top, 2.25rem));
+  overflow-y: auto;
+  /* The button's own width stays free, so the words end just left of the three lines. */
+  padding: 0 calc(var(--menu-button, 40px) + 1rem) 0.25rem 0;
+  color: var(--menu-fg, #2a2a20);
+  transform: translateX(100%);
+  transform-origin: top right;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s linear 0.55s;
+}
+
+.drawer-open .drawer {
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s;
+}
+
+/* One line, level with the button: Début · Contact · L'équipe, then the FR/EN switch next to
+   the button. Laid out from the button leftward; when a phone is too narrow for the whole line,
+   the switch keeps the button's line and the links run as one line just under it. Never
+   reaches the logo. */
 .drawer-inner {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 1rem;
+  flex-direction: row-reverse;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem 1.5rem;
+}
+
+.drawer-inner > * {
+  pointer-events: auto;
 }
 
 .bar {
@@ -297,40 +344,54 @@ h3 {
 }
 
 .drawer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  column-gap: 1.25rem;
   margin: 0;
-  padding: 0.5rem 2rem 0.5rem 0.5rem;
+  padding: 0;
   list-style: none;
   font-family: var(--font-body);
-  font-size: 1.125rem;
+  font-size: 1.05rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  overflow-wrap: anywhere;
 }
 
-.drawer-links li + li {
-  margin-top: 0.5rem;
+/* Phones: the header row has no room for the whole line beside the logo, so the line runs just
+   under the bar, full width, on the bar's own olive, still sliding in from the button's side. */
+@media (max-width: 767px) {
+  .drawer-clip {
+    top: var(--menu-bar-bottom, 4.5rem);
+    right: 0;
+    width: 100%;
+  }
+
+  .drawer {
+    padding: 0.25rem 1rem 0.5rem;
+    background: var(--menu-bg, var(--color-olive));
+  }
+
+  .drawer-links {
+    column-gap: 1rem;
+    font-size: 0.9rem;
+  }
 }
 
-.drawer-links li {
-  opacity: 0;
-  transform: translateY(-0.5rem);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-
-.drawer-open .drawer-links li {
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    opacity 0.5s ease calc(0.15s + var(--i) * 0.05s),
-    transform 0.5s cubic-bezier(0.32, 0.72, 0, 1) calc(0.15s + var(--i) * 0.05s);
+@media (min-width: 1024px) {
+  .drawer-links {
+    column-gap: 1.75rem;
+    font-size: 1.25rem;
+  }
 }
 
 .drawer-links a {
   position: relative;
   display: inline-flex;
   align-items: center;
+  /* Same height as the switch: one even line, and a comfortable tap target. */
+  min-height: 44px;
   gap: 0.5rem;
   color: inherit;
   text-decoration: none;
@@ -355,104 +416,12 @@ h3 {
   transform-origin: bottom left;
 }
 
-.drawer-handle {
-  position: absolute;
-  bottom: 0.25rem;
-  left: 50%;
-  width: 4rem;
-  height: 0.3rem;
-  margin: 1rem 0;
-  border-radius: 9999px;
-  background: #737373;
-  transform: translateX(-50%);
-}
-
-@media (min-width: 768px) {
-  .drawer-handle {
-    display: none;
-  }
-
-  /* Desktop: the menu is a rounded card that unfolds from the menu button. Only opacity and
-     transform move, which the browser animates on the compositor, so it stays smooth. */
-  .drawer-clip {
-    top: calc(var(--header-bottom, 4.5rem) + 0.25rem);
-    right: 1rem;
-    bottom: auto;
-    left: auto;
-    width: min(22rem, calc(100% - 2rem));
-    overflow: visible;
-  }
-
-  .drawer {
-    padding: 1.75rem 1.5rem;
-    border-radius: 1.75rem;
-    box-shadow: 0 24px 60px rgb(0 0 0 / 18%);
-    opacity: 0;
-    transform: translateY(-0.75rem) scale(0.94);
-    transform-origin: calc(100% - 1.5rem) 0;
-    pointer-events: none;
-    transition:
-      opacity 0.3s ease,
-      transform 0.35s cubic-bezier(0.4, 0, 1, 1);
-  }
-
-  .drawer-open .drawer {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-    transition:
-      opacity 0.45s ease,
-      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  /* The links follow the card in, one after the other. */
-  .drawer-links li {
-    opacity: 0;
-    transform: translateY(0.5rem);
-    transition:
-      opacity 0.2s ease,
-      transform 0.2s ease;
-  }
-
-  .drawer-open .drawer-links li {
-    opacity: 1;
-    transform: none;
-    transition:
-      opacity 0.5s ease,
-      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .drawer-open .drawer-links li:nth-child(1) {
-    transition-delay: 0.08s;
-  }
-
-  .drawer-open .drawer-links li:nth-child(2) {
-    transition-delay: 0.14s;
-  }
-
-  .drawer-open .drawer-links li:nth-child(3) {
-    transition-delay: 0.2s;
-  }
-}
-
-@media (min-width: 768px) and (prefers-reduced-motion: reduce) {
+/* Reduced motion: no slide. The words are simply shown next to the button, or hidden. */
+@media (prefers-reduced-motion: reduce) {
   .drawer,
-  .drawer-open .drawer,
-  .drawer-links li,
-  .drawer-open .drawer-links li {
+  .drawer-open .drawer {
     transform: none;
     transition: none;
-  }
-}
-
-@media (min-width: 1280px) {
-  .drawer-links {
-    padding-left: 0;
-    font-size: 1.5rem;
-  }
-
-  .drawer-links li + li {
-    margin-top: 1rem;
   }
 }
 
@@ -461,10 +430,7 @@ h3 {
     scroll-behavior: auto;
   }
 
-  .drawer,
   .drawer-overlay,
-  .drawer-links li,
-  .drawer-open .drawer-links li,
   .bar,
   .drawer-open .site-header-toggle .bar,
   .drawer-links a::after,
@@ -525,8 +491,26 @@ h3 {
   text-underline-offset: 4px;
 }
 
-.site-footer-copy {
+/* Legal notice and privacy (Swiss nLPD / nDSG): marked as in preparation for now. */
+.site-footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 1.5rem;
   margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.site-footer-legal-status {
+  font-style: italic;
+}
+
+.site-footer-copy {
+  margin: 1rem 0 0;
   padding-top: 1rem;
   border-top: 1px solid rgb(255 255 255 / 35%);
   font-size: 0.875rem;
@@ -934,16 +918,10 @@ html.lenis {
   scroll-behavior: auto;
 }
 
-/* lenis.css clips <html> while Lenis is stopped (menu open). That makes <body> its own scroll
-   container and unsticks the header. The body's overflow: hidden already locks the page. */
-html.lenis.lenis-stopped:not(.lenis-autoToggle) {
-  overflow: visible;
-}
-
 .story {
   --ink: #2a2a20;
   --olive-ink: #5f5e3f;
-  /* Sticky header height: a flush 4.5rem bar at every width. */
+  /* Sticky header height: 72px on phones; 84px on desktop (set at the end of the file). */
   --header-clear: 4.5rem;
 
   overflow-x: clip;
@@ -966,20 +944,24 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   position: relative;
 }
 
-/* Full-screen story blocks track the visible viewport (dvh), so on iOS a pinned panel is
-   never shorter than what is on screen while the toolbar shows, hides, or animates. */
+/* Full-screen story blocks use one locked screen height (--screen, set once by
+   screen-height.ts) so a pinned panel never changes size while the iOS toolbar animates. It is
+   the large viewport, on purpose: the bottom edge sits behind Safari's bar, never in view.
+   100lvh is the value before the script runs. */
 .panel {
   position: sticky;
   top: 0;
   display: grid;
   place-items: center;
   height: 100vh;
-  height: 100dvh;
+  height: var(--screen, 100lvh);
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--screen, 100lvh);
   /* 2px overlap: the next block paints over it, so rounding can't open a 1px line. */
   margin-bottom: -2px;
-  padding: calc(var(--header-clear) + 2rem) 1.5rem 4rem;
+  /* The bottom padding includes the toolbar's height (100lvh − 100svh, 0 where there is no
+     moving toolbar), so the text is centred in what is actually visible. */
+  padding: calc(var(--header-clear) + 2rem) 1.5rem calc(4rem + var(--toolbar, 0px));
   text-align: center;
 }
 
@@ -987,12 +969,13 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
    matches the panel instead of showing the page behind it. */
 .story-spacer {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--screen, 100lvh);
   margin-bottom: -2px;
 }
 
 .panel--intro + .story-spacer {
-  background: var(--color-cream);
+  /* The photo's veiled tone, so a toolbar shortfall under it never shows a light strip. */
+  background: #2b2822;
 }
 
 .panel--olive + .story-spacer {
@@ -1004,17 +987,53 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 }
 
 .panel--intro {
-  /* Runs under the sticky header so the first screen is one field of cream. */
+  /* Runs under the sticky header so the photo fills the whole first screen. */
   margin-top: calc(-1 * var(--header-clear));
-  background: var(--color-cream);
-  color: var(--color-olive);
+  background: #2b2822;
+  color: #fff;
+}
+
+/* The petits fours photo fills the first screen behind the text. */
+.panel-photo {
+  position: absolute;
+  inset: 0;
+}
+
+/* A dark veil, deepest behind the text and at the bottom (the “Défiler” cue), so the cream
+   title and white lines read cleanly over the busy photo at every size. */
+.panel-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 75% 55% at 50% 50%, rgb(20 18 14 / 45%), transparent 75%),
+    linear-gradient(rgb(20 18 14 / 45%), rgb(20 18 14 / 55%) 60%, rgb(20 18 14 / 70%));
+}
+
+.panel-intro-text,
+.panel--intro .story-cue {
+  position: relative;
+  z-index: 1;
+}
+
+.panel--intro .story-cue {
+  position: absolute;
+  color: #fff;
+}
+
+.panel--intro .story-cue-line {
+  background: rgb(255 255 255 / 35%);
+}
+
+.panel--intro .story-cue-line::after {
+  background: #fff;
 }
 
 /* Short phones (iPhone SE and smaller): keep room above the “Défiler” cue at the bottom. */
 @media (max-width: 767px) and (max-height: 700px) {
   .panel--intro {
     padding-top: calc(var(--header-clear) + 1rem);
-    padding-bottom: 5.5rem;
+    padding-bottom: calc(5.5rem + var(--toolbar, 0px));
   }
 
   .panel--intro .panel-subline {
@@ -1033,7 +1052,13 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   /* Scales with the screen so “Contactez-nous” stays on one line down to 320px phones. */
   font-size: clamp(2.5rem, 0.5rem + 11vw, 8rem);
   line-height: 0.95;
-  color: var(--color-olive);
+  color: var(--color-cream);
+  text-shadow: 0 2px 24px rgb(0 0 0 / 35%);
+}
+
+.panel--intro .panel-subline {
+  color: #fff;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 45%);
 }
 
 .panel-subline {
@@ -1053,7 +1078,6 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 }
 
 .panel--olive {
-  border-radius: 1rem 1rem 0 0;
   background: var(--color-olive);
   color: #fff;
 }
@@ -1065,7 +1089,8 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 
 .story-cue {
   position: absolute;
-  bottom: 2rem;
+  /* Clear of Safari's bottom bar: the panel itself runs on behind it. */
+  bottom: calc(2rem + var(--toolbar, 0px));
   left: 50%;
   display: flex;
   flex-direction: column;
@@ -1253,9 +1278,9 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   display: grid;
   place-items: center;
   height: 100vh;
-  height: 100dvh;
+  height: var(--screen, 100lvh);
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--screen, 100lvh);
   padding: var(--header-clear) 1.5rem 1rem;
 }
 
@@ -1318,9 +1343,48 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   }
 }
 
-.chapter-closing {
-  height: 85vh;
-  height: 85svh;
+/* Phones and tablets below 900px: each chapter's line belongs to the top of its section. The
+   section opens with a short stretch of its own colour; the line stays fixed just under the
+   header through that stretch, and when the first photo arrives the line scrolls away with it.
+   It never follows the photos down to the bottom of the section. The section is at least the
+   large viewport (100lvh) tall, so its colour runs on behind Safari's bar. */
+@media (max-width: 899px) {
+  .chapter-split,
+  .chapter-stack {
+    min-height: 100vh;
+    min-height: 100lvh;
+  }
+
+  /* The opening stretch: the line's runway. Its end is where the first photo begins. */
+  .chapter-split-title,
+  .chapter-stack-title {
+    display: block;
+    min-height: 70vh;
+    min-height: 70svh;
+    padding: 1.25rem 1.5rem 0;
+    overflow: visible;
+    text-align: center;
+  }
+
+  .chapter-split-title .beat-text,
+  .chapter-stack-title .beat-text {
+    position: sticky;
+    top: calc(var(--header-clear) + 1.25rem);
+    z-index: 2;
+    margin-inline: auto;
+  }
+
+  /* Blue section: each photo sits at the top of its frame, and the frame pins just under the
+     header. So “Rêver grand…” stays put until the first photo itself reaches it, then rests on
+     top of that photo (1rem above it) while the photo pushes it away. Never further down. */
+  .stack-figure {
+    top: var(--header-clear);
+    height: calc(100vh - var(--header-clear));
+    height: calc(var(--screen, 100lvh) - var(--header-clear));
+    min-height: 0;
+    place-items: start center;
+    padding: 1rem 1.5rem;
+  }
 }
 
 @media (min-width: 900px) {
@@ -1390,9 +1454,8 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   line-height: 0.9;
 }
 
-/* The first band slides over the cream intro: give it an edge. */
+/* The first band slides over the intro photo: a soft shadow gives it an edge. */
 .marquee--sheet {
-  border-radius: 1rem 1rem 0 0;
   box-shadow: 0 -16px 40px rgb(42 42 32 / 10%);
 }
 
@@ -1648,16 +1711,13 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 .send-button:hover {
   transform: scale(1.02);
   box-shadow:
-    0 0 1px 2px rgb(255 255 255 / 30%),
     0 15px 30px rgb(0 0 0 / 30%),
     0 10px 3px -3px rgb(0 0 0 / 4%);
 }
 
 .send-button:active {
   transform: scale(1);
-  box-shadow:
-    0 0 1px 2px rgb(255 255 255 / 30%),
-    0 10px 3px -3px rgb(0 0 0 / 20%);
+  box-shadow: 0 10px 3px -3px rgb(0 0 0 / 20%);
 }
 
 .send-button:focus-visible {
@@ -1684,7 +1744,6 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 
 .send-button:hover::after {
   transform: scale(1.05, 1.1);
-  box-shadow: inset 0 -1px 3px 0 rgb(255 255 255 / 25%);
 }
 
 .send-button::before {
@@ -1695,39 +1754,6 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   border-radius: 30px;
   background: linear-gradient(to top, var(--neutral-1), var(--neutral-2));
   filter: blur(0.5px);
-}
-
-.send-button-outline {
-  position: absolute;
-  inset: -2px -3.5px;
-  z-index: 1;
-  overflow: hidden;
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-
-.send-button-outline::before {
-  content: '';
-  position: absolute;
-  inset: -100%;
-  background: conic-gradient(from 180deg, transparent 60%, #fff 80%, transparent 100%);
-  animation: send-spin 2s linear infinite;
-  animation-play-state: paused;
-}
-
-.send-button:hover .send-button-outline {
-  opacity: 1;
-}
-
-.send-button:hover .send-button-outline::before {
-  animation-play-state: running;
-}
-
-@keyframes send-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .send-state {
@@ -1777,6 +1803,41 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 
 .send-button:hover .send-state--default .send-icon {
   transform: rotate(45deg) scale(1.25);
+}
+
+/* Hovered and not yet sent: the plane slowly pulls back to the left, gathering speed for the
+   take-off, while it jitters with excitement. */
+.send-button:not(.is-sent):hover .send-state--default .send-icon {
+  transform: translateX(-6px) rotate(45deg) scale(1.25);
+  transition: transform 1.2s cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+/* On hover the paper plane jitters, eager to take off. Stops once it is sent (take-off). */
+.send-button:not(.is-sent):hover .send-state--default .send-icon svg {
+  animation: send-eager 0.32s ease-in-out infinite;
+}
+
+@keyframes send-eager {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  20% {
+    transform: translate(-1px, 1px) rotate(-7deg);
+  }
+
+  40% {
+    transform: translate(1px, -1px) rotate(6deg);
+  }
+
+  60% {
+    transform: translate(-1px, -1px) rotate(-5deg);
+  }
+
+  80% {
+    transform: translate(1px, 1px) rotate(7deg);
+  }
 }
 
 .send-state--default .send-icon::before {
@@ -2054,7 +2115,6 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   .field-bar::after,
   .send-button,
   .send-button::after,
-  .send-button-outline,
   .send-icon,
   .contact-edit {
     transition: none;
@@ -2066,21 +2126,17 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 
   .send-button:hover,
   .send-button:hover::after,
-  .send-button:hover .send-state--default .send-icon {
+  .send-button:hover .send-state--default .send-icon,
+  .send-button:not(.is-sent):hover .send-state--default .send-icon {
     transform: none;
   }
 
-  .send-button-outline,
-  .send-button:hover .send-button-outline {
-    opacity: 0;
-  }
-
-  .send-button-outline::before,
   .send-label span,
   .send-button:hover .send-label span,
   .send-button.is-sent .send-label span,
   .send-icon svg,
   .send-state--default .send-icon svg,
+  .send-button:not(.is-sent):hover .send-state--default .send-icon svg,
   .send-button.is-sent .send-state--default svg,
   .send-button.is-sent .send-state--sent .send-label span,
   .send-button.is-sent .send-state--sent .send-icon svg,
@@ -2223,25 +2279,12 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
   }
 }
 
-/* FR/EN switch: on the right of the menu, and under the links in the footer. */
+/* FR/EN switch: first line of the menu, next to the button; under the links in the footer. */
 .drawer-lang {
   flex-shrink: 0;
 }
 
-/* Desktop menu: the switch fades in with the links. */
-@media (min-width: 768px) {
-  .drawer-lang {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  .drawer-open .drawer-lang {
-    opacity: 1;
-    transition: opacity 0.5s ease 0.14s;
-  }
-}
-
-/* Drawn in currentColor: dark in the white menu, white in the olive footer.
+/* Drawn in currentColor: the header's colour in the menu, white in the olive footer.
    French = left/off, English = right/on. */
 .lang-toggle {
   display: inline-flex;
@@ -2324,5 +2367,17 @@ html.lenis.lenis-stopped:not(.lenis-autoToggle) {
 
   .lang-prompt-options button {
     transition: none;
+  }
+}
+
+/* Desktop header is 84px (the phone bar is 60px): clearance for the story and the form. Kept
+   at the end so it follows the base .story and .contact rules. */
+@media (min-width: 768px) {
+  .story {
+    --header-clear: 5.25rem;
+  }
+
+  .contact {
+    scroll-margin-top: 5.5rem;
   }
 }

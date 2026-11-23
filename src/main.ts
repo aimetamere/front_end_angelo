@@ -1,6 +1,7 @@
 import './style.css';
 import { bootPage } from './boot';
 import { mountMarquees } from './marquee';
+import { lockScreenHeight } from './screen-height';
 import { initSmoothScroll } from './smooth-scroll';
 import { renderStory, mountStory } from './story';
 
@@ -28,6 +29,7 @@ if (app) {
     },
     beforeReveal: jumpToHash,
   }).then(() => {
+    lockScreenHeight();
     initSmoothScroll();
     mountMarquees(app, 500);
   });

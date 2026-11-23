@@ -35,14 +35,13 @@ export const mountHeader = (root: HTMLElement) => {
     <div class="drawer-clip">
       <div class="drawer" id="site-drawer" role="dialog" aria-label="Menu" inert>
         <nav class="drawer-inner">
+          <div class="drawer-lang">${renderLangToggle()}</div>
           <ul class="drawer-links">
             ${getLinks()
-              .map((link, i) => `<li style="--i: ${i}">${renderLink(link)}</li>`)
+              .map((link) => `<li>${renderLink(link)}</li>`)
               .join('')}
           </ul>
-          <div class="drawer-lang">${renderLangToggle()}</div>
         </nav>
-        <div class="drawer-handle" aria-hidden="true"></div>
       </div>
     </div>
   `,
@@ -55,12 +54,25 @@ export const mountHeader = (root: HTMLElement) => {
 
   const isOpen = () => document.body.classList.contains('drawer-open');
 
+  // The menu's top-right corner is the three-line button: it comes out of the button and goes
+  // back into it. Measured from the button itself, never from the header bar.
   const alignDrawer = () => {
-    const { bottom, left, width } = header.getBoundingClientRect();
+    const button = toggle.getBoundingClientRect();
     const rootStyle = document.documentElement.style;
-    rootStyle.setProperty('--header-bottom', `${bottom}px`);
-    rootStyle.setProperty('--header-left', `${left}px`);
-    rootStyle.setProperty('--header-width', `${width}px`);
+    // Fixed boxes are placed against the viewport without the scrollbar: clientWidth.
+    const viewportWidth = document.documentElement.clientWidth;
+    rootStyle.setProperty('--menu-top', `${button.top + button.height / 2}px`);
+    rootStyle.setProperty('--menu-right', `${viewportWidth - button.right}px`);
+    rootStyle.setProperty('--menu-button', `${button.width}px`);
+    // Room from the button back to just past the logo: the line never slides under the logo.
+    const logo = header.querySelector('.site-header-logo')!.getBoundingClientRect();
+    rootStyle.setProperty('--menu-room', `${button.right - logo.right - 24}px`);
+    // Phones: the line runs just under the bar, on the bar's colour.
+    rootStyle.setProperty('--menu-bar-bottom', `${header.getBoundingClientRect().bottom}px`);
+    // The menu wears the header's current colours (they follow the section under the header).
+    const headerStyle = getComputedStyle(header);
+    rootStyle.setProperty('--menu-fg', headerStyle.color);
+    rootStyle.setProperty('--menu-bg', headerStyle.getPropertyValue('--header-bg').trim());
   };
 
   const setOpen = (open: boolean) => {
@@ -80,6 +92,12 @@ export const mountHeader = (root: HTMLElement) => {
   };
 
   toggle.addEventListener('click', () => setOpen(!isOpen()));
+
+  // The logo starts larger on the first screen and settles to its normal size once the page
+  // scrolls. It is a transform, so the header bar keeps its height and nothing below moves.
+  const markTop = () => header.classList.toggle('is-top', window.scrollY < 8);
+  markTop();
+  window.addEventListener('scroll', markTop, { passive: true });
   overlay.addEventListener('click', () => setOpen(false));
   drawer.querySelectorAll('.drawer-links a').forEach((link) => {
     link.addEventListener('click', () => setOpen(false));
@@ -100,4 +118,22 @@ export const mountHeader = (root: HTMLElement) => {
   window.addEventListener('resize', () => {
     if (isOpen()) alignDrawer();
   });
+
+  // The page scrolls with the menu open: keep the menu on the button and in the colours of the
+  // section now under the header (header-theme.ts updates those on the same scroll).
+  let realignQueued = false;
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!isOpen() || realignQueued) return;
+      realignQueued = true;
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          realignQueued = false;
+          if (isOpen()) alignDrawer();
+        }),
+      );
+    },
+    { passive: true },
+  );
 };
