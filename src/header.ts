@@ -1,14 +1,30 @@
-import { links } from './links';
+import { lang, switchLang, tr } from './i18n';
+import { getLinks, renderLink } from './links';
+
+/**
+ * FR/EN switch in the header bar. French is the left/off side, English the right/on side.
+ * Activating it goes through switchLang (stores the choice and reloads into the other language).
+ */
+const renderLangToggle = () => `
+  <button class="lang-toggle" type="button" role="switch" aria-checked="${lang() === 'en'}" aria-label="${tr('Langue : français', 'Language: English')}">
+    <span class="lang-toggle-track" aria-hidden="true">
+      <span class="lang-toggle-thumb"></span>
+      <span class="lang-toggle-label lang-toggle-label--fr">FR</span>
+      <span class="lang-toggle-label lang-toggle-label--en">EN</span>
+    </span>
+  </button>
+`;
 
 export const mountHeader = (root: HTMLElement) => {
   root.insertAdjacentHTML(
     'afterbegin',
     `
     <header class="site-header">
-      <a href="#" class="site-header-logo">
+      <a href="${getLinks()[0].href}" class="site-header-logo">
         <img src="/logo_white.png" alt="À Table — By Angelo" />
       </a>
-      <button class="menu-bars site-header-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="site-drawer">
+      ${renderLangToggle()}
+      <button class="menu-bars site-header-toggle" type="button" aria-label="${tr('Ouvrir le menu', 'Open the menu')}" aria-expanded="false" aria-controls="site-drawer">
         <span class="bar bar--top" aria-hidden="true"></span>
         <span class="bar bar--middle" aria-hidden="true"></span>
         <span class="bar bar--bottom" aria-hidden="true"></span>
@@ -20,7 +36,9 @@ export const mountHeader = (root: HTMLElement) => {
       <div class="drawer" id="site-drawer" role="dialog" aria-label="Menu" inert>
         <nav class="drawer-inner">
           <ul class="drawer-links">
-            ${links.map(({ href, label }, i) => `<li style="--i: ${i}"><a href="${href}">${label}</a></li>`).join('')}
+            ${getLinks()
+              .map((link, i) => `<li style="--i: ${i}">${renderLink(link)}</li>`)
+              .join('')}
           </ul>
         </nav>
         <div class="drawer-handle" aria-hidden="true"></div>
@@ -49,7 +67,10 @@ export const mountHeader = (root: HTMLElement) => {
     document.body.classList.toggle('drawer-open', open);
     drawer.inert = !open;
     toggle.setAttribute('aria-expanded', String(open));
-    toggle.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+    toggle.setAttribute(
+      'aria-label',
+      open ? tr('Fermer le menu', 'Close the menu') : tr('Ouvrir le menu', 'Open the menu'),
+    );
     if (open) {
       drawer.querySelector<HTMLElement>('.drawer-links a')?.focus({ preventScroll: true });
     } else {
@@ -61,6 +82,15 @@ export const mountHeader = (root: HTMLElement) => {
   overlay.addEventListener('click', () => setOpen(false));
   drawer.querySelectorAll('.drawer-links a').forEach((link) => {
     link.addEventListener('click', () => setOpen(false));
+  });
+
+  // The link to the page you are on stays put.
+  drawer.querySelectorAll<HTMLAnchorElement>('a[aria-current="page"]').forEach((link) => {
+    link.addEventListener('click', (event) => event.preventDefault());
+  });
+
+  root.querySelector<HTMLButtonElement>('.lang-toggle')!.addEventListener('click', () => {
+    switchLang(lang() === 'en' ? 'fr' : 'en');
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && isOpen()) setOpen(false);

@@ -1,4 +1,5 @@
-import { links } from './links';
+import { tr } from './i18n';
+import { getLinks, renderLink } from './links';
 
 export const mountFooter = (root: HTMLElement) => {
   root.insertAdjacentHTML(
@@ -6,12 +7,14 @@ export const mountFooter = (root: HTMLElement) => {
     `
     <footer class="site-footer">
       <div class="site-footer-inner">
-        <a href="#" class="site-footer-logo">
+        <a href="${getLinks()[0].href}" class="site-footer-logo">
           <img src="/logo_white.png" alt="À Table — By Angelo" />
         </a>
-        <nav aria-label="Liens du pied de page">
+        <nav aria-label="${tr('Liens du pied de page', 'Footer links')}">
           <ul class="site-footer-links">
-            ${links.map(({ href, label }) => `<li><a href="${href}">${label}</a></li>`).join('')}
+            ${getLinks()
+              .map((link) => `<li>${renderLink(link)}</li>`)
+              .join('')}
           </ul>
         </nav>
       </div>
@@ -19,4 +22,9 @@ export const mountFooter = (root: HTMLElement) => {
     </footer>
   `,
   );
+
+  // The link to the page you are on stays put.
+  root.querySelectorAll<HTMLAnchorElement>('.site-footer a[aria-current="page"]').forEach((link) => {
+    link.addEventListener('click', (event) => event.preventDefault());
+  });
 };
