@@ -1,4 +1,5 @@
-import { tr } from './i18n';
+import { escapeHtml, getContent, hasApi, submitForm, type ImageValue } from './api';
+import { lang, tr } from './i18n';
 import { renderMarquee } from './marquee';
 
 interface Photo {
@@ -49,6 +50,15 @@ const img = ({ src, width, height, alt }: Photo, { sizes, priority = false }: Im
   ).join(', ');
   return `<img src="${webSrc(src, 1200)}" srcset="${srcset}" sizes="${sizes}" width="${width}" height="${height}" alt="${alt}" decoding="async" loading="eager"${priority ? ' fetchpriority="high"' : ''} />`;
 };
+
+// A photo from the API: its own url and variants instead of the site's web copies.
+const apiImg = (image: ImageValue, alt: string, { sizes, priority = false }: ImgOptions) => {
+  const srcset = (image.variants ?? []).map((v) => `${escapeHtml(v.url)} ${v.width}w`).join(', ');
+  const size = image.width && image.height ? ` width="${image.width}" height="${image.height}"` : '';
+  return `<img src="${escapeHtml(image.url)}"${srcset ? ` srcset="${srcset}" sizes="${sizes}"` : ''}${size} alt="${escapeHtml(alt)}" decoding="async" loading="eager"${priority ? ' fetchpriority="high"' : ''} />`;
+};
+
+const apiAlt = (alt?: { fr?: string; en?: string }) => tr(alt?.fr ?? '', alt?.en || alt?.fr || '');
 
 const srOnly = (text: string) => `<span class="sr-only">${text}</span>`;
 
@@ -144,6 +154,11 @@ const renderForm = () => `
         <p class="field-error" id="contact-callback-error" hidden></p>
       </div>
 
+      <!-- Honeypot: invisible to people, tempting to bots. -->
+      <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0" />
+
+      <p class="field-error contact-submit-error" role="alert" hidden></p>
+
       <button class="send-button" type="submit">
         <span class="send-state send-state--default">
           <span class="send-icon">${sendIcons.plane}</span>
@@ -180,13 +195,33 @@ const renderForm = () => `
   </section>
 `;
 
+// The three gallery columns, as figures. Fallback: today's fixed picks from getPhotos().
+const renderGallery = (p: Photo[]) => {
+  const sizes = '33vw';
+  const fromApi = getContent()?.collections?.gallery?.filter((item) => item.image?.url);
+  if (fromApi?.length) {
+    const column = (name: string) =>
+      fromApi
+        .filter((item) => item.column === name)
+        .map((item) => `<figure>${apiImg(item.image!, apiAlt(item.alt), { sizes })}</figure>`)
+        .join('');
+    return { left: column('left'), middle: column('middle'), right: column('right') };
+  }
+  const column = (indices: number[]) => indices.map((n) => `<figure>${img(p[n], { sizes })}</figure>`).join('');
+  return { left: column([1, 3, 4, 8, 11]), middle: column([12, 0, 5]), right: column([2, 9, 6, 10, 13]) };
+};
+
 export const renderStory = () => {
   const p = getPhotos();
+  const heroOptions = { sizes: '100vw', priority: true };
+  const apiHero = getContent()?.settings?.hero;
+  const hero = apiHero?.photo?.url ? apiImg(apiHero.photo, apiAlt(apiHero.alt), heroOptions) : img(p[14], heroOptions);
+  const gallery = renderGallery(p);
   return `
     <div class="story">
       <div class="story-stack">
         <section class="panel panel--intro" aria-labelledby="story-title">
-          <figure class="panel-photo">${img(p[14], { sizes: '100vw', priority: true })}</figure>
+          <figure class="panel-photo">${hero}</figure>
           <div class="panel-intro-text">
             <h1 id="story-title">${tr('Contactez-nous', 'Contact us')}</h1>
             <p class="panel-subline">${tr(
@@ -243,13 +278,13 @@ export const renderStory = () => {
 
       <section class="gallery" aria-label="${tr('Galerie', 'Gallery')}">
         <div class="gallery-column">
-          ${[1, 3, 4, 8, 11].map((n) => `<figure>${img(p[n], { sizes: '33vw' })}</figure>`).join('')}
+          ${gallery.left}
         </div>
         <div class="gallery-column gallery-column--sticky">
-          ${[12, 0, 5].map((n) => `<figure>${img(p[n], { sizes: '33vw' })}</figure>`).join('')}
+          ${gallery.middle}
         </div>
         <div class="gallery-column">
-          ${[2, 9, 6, 10, 13].map((n) => `<figure>${img(p[n], { sizes: '33vw' })}</figure>`).join('')}
+          ${gallery.right}
         </div>
       </section>
 
@@ -323,7 +358,8 @@ const setupForm = (root: HTMLElement, reducedMotion: () => boolean) => {
   const confirm = root.querySelector<HTMLElement>('.contact-confirm')!;
   const confirmTitle = confirm.querySelector<HTMLElement>('.contact-confirm-title')!;
   const editButton = confirm.querySelector<HTMLButtonElement>('.contact-edit')!;
-  const controls = [...form.querySelectorAll<Control>('input, select, textarea')];
+  const controls = [...form.querySelectorAll<Control>('input, select, textarea')].filter((c) => c.name !== 'website');
+  const submitError = form.querySelector<HTMLElement>('.contact-submit-error')!;
   let sending = false;
 
   const clearError = (control: Control) => {
@@ -341,11 +377,48 @@ const setupForm = (root: HTMLElement, reducedMotion: () => boolean) => {
     control.addEventListener('change', clear);
   });
 
-  form.addEventListener('submit', (event) => {
+  const showSubmitError = (message: string) => {
+    submitError.textContent = message;
+    submitError.hidden = false;
+  };
+
+  const resetButton = () => {
+    sending = false;
+    button.classList.remove('is-sent');
+    button.removeAttribute('aria-disabled');
+  };
+
+  const showConfirmation = () => {
+    const data = new FormData(form);
+    confirm.querySelector('[data-confirm="name"]')!.textContent = String(data.get('name')).trim();
+    confirm.querySelector('[data-confirm="phone"]')!.textContent = String(data.get('phone')).trim();
+    form.hidden = true;
+    confirm.hidden = false;
+    confirmTitle.focus();
+  };
+
+  /** Server-side refusals, shown on the fields they name (the first one gets the focus). */
+  const showFieldErrors = (fields: Record<string, string>) => {
+    let first: Control | null = null;
+    for (const key of Object.keys(fields)) {
+      const control = controls.find((c) => c.name === key);
+      const error = form.querySelector<HTMLElement>(`#contact-${key}-error`);
+      if (!control || !error) continue;
+      error.textContent = errorFor(control) ?? tr('Vérifiez ce champ.', 'Please check this field.');
+      error.hidden = false;
+      control.setAttribute('aria-invalid', 'true');
+      first ??= control;
+    }
+    if (first) first.focus();
+    else showSubmitError(tr('Vérifiez les champs du formulaire.', 'Please check the form fields.'));
+  };
+
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (sending) return;
 
     controls.forEach(clearError);
+    submitError.hidden = true;
     button.classList.remove('is-sent');
 
     for (const control of controls) {
@@ -363,18 +436,43 @@ const setupForm = (root: HTMLElement, reducedMotion: () => boolean) => {
     button.classList.add('is-sent');
     button.setAttribute('aria-disabled', 'true');
 
-    // No backend yet: a real request would go here before showing the confirmation.
-    window.setTimeout(
-      () => {
-        const data = new FormData(form);
-        confirm.querySelector('[data-confirm="name"]')!.textContent = String(data.get('name')).trim();
-        confirm.querySelector('[data-confirm="phone"]')!.textContent = String(data.get('phone')).trim();
-        form.hidden = true;
-        confirm.hidden = false;
-        confirmTitle.focus();
-      },
-      reducedMotion() ? 0 : 1800,
-    );
+    const delay = reducedMotion() ? 0 : 1800;
+
+    // No backend: the animation alone, then the confirmation.
+    if (!hasApi) {
+      window.setTimeout(showConfirmation, delay);
+      return;
+    }
+
+    // The visitor sees the plane fly for at least its animation time, even if the API is quick.
+    const data = new FormData(form);
+    const value = (key: string) => String(data.get(key) ?? '').trim();
+    const [result] = await Promise.all([
+      submitForm('event_request', {
+        name: value('name'),
+        phone: value('phone'),
+        email: value('email'),
+        occasion: value('occasion'),
+        guests: Number(value('guests')),
+        message: value('message'),
+        callback: (form.elements.namedItem('callback') as HTMLInputElement).checked,
+        lang: lang(),
+        website: value('website'),
+      }),
+      new Promise((resolve) => window.setTimeout(resolve, delay)),
+    ]);
+
+    if (result.ok) {
+      showConfirmation();
+      return;
+    }
+    resetButton();
+    if (result.status === 422 && result.fields) showFieldErrors(result.fields);
+    else if (result.status === 429) {
+      showSubmitError(tr('Trop de demandes envoyées. Réessayez dans quelques minutes.', 'Too many requests sent. Please try again in a few minutes.'));
+    } else {
+      showSubmitError(tr('L’envoi a échoué. Réessayez dans un instant.', 'Sending failed. Please try again in a moment.'));
+    }
   });
 
   editButton.addEventListener('click', () => {

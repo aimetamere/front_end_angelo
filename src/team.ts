@@ -1,3 +1,4 @@
+import { escapeHtml, getContent } from './api';
 import { tr } from './i18n';
 
 interface Member {
@@ -9,7 +10,19 @@ interface Member {
 }
 
 // A function so the copy is picked in the visitor's language at render time.
-const getMembers = (): Member[] => [
+const getMembers = (): Member[] => {
+  const fromApi = getContent()?.collections?.team;
+  if (!fromApi?.length) return placeholders();
+  return fromApi.map((member) => ({
+    name: member.name ?? '',
+    role: tr(member.role?.fr ?? '', member.role?.en || member.role?.fr || ''),
+    description: tr(member.description?.fr ?? '', member.description?.en || member.description?.fr || ''),
+    photo: member.photo?.url ?? '/icons/portiait.png',
+    color: `var(--color-${member.color ?? 'sage'})`,
+  }));
+};
+
+const placeholders = (): Member[] => [
   {
     name: 'Angelo',
     role: tr('Fondateur & Chef', 'Founder & Chef'),
@@ -41,20 +54,20 @@ const chevronsRightIcon = `
 `;
 
 const renderMember = ({ name, role, description, photo, color }: Member) => `
-  <article class="team-card" style="--card-color: ${color}" tabindex="0">
-    <img class="team-card-photo" src="${photo}" alt="${tr('Portrait de', 'Portrait of')} ${name}" />
+  <article class="team-card" style="--card-color: ${escapeHtml(color)}" tabindex="0">
+    <img class="team-card-photo" src="${escapeHtml(photo)}" alt="${tr('Portrait de', 'Portrait of')} ${escapeHtml(name)}" />
     <div class="team-card-details">
       <div class="team-card-details-content">
-        <h3>${name}</h3>
-        <p>${description}</p>
+        <h3>${escapeHtml(name)}</h3>
+        <p>${escapeHtml(description)}</p>
         <a class="team-card-button" href="/#contact">
           ${tr('En savoir plus', 'Learn more')} ${chevronsRightIcon}
         </a>
       </div>
     </div>
     <div class="team-card-caption">
-      <h3>${name}</h3>
-      <p class="subtitle">${role}</p>
+      <h3>${escapeHtml(name)}</h3>
+      <p class="subtitle">${escapeHtml(role)}</p>
     </div>
   </article>
 `;

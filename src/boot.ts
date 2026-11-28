@@ -1,3 +1,4 @@
+import { loadContent, setContent } from './api';
 import { mountFooter } from './footer';
 import { mountHeader } from './header';
 import { mountHeaderTheme } from './header-theme';
@@ -16,6 +17,8 @@ interface BootOptions {
  * language, header and footer, then the gate (fonts and every image ready) and the reveal.
  */
 export const bootPage = async (app: HTMLElement, { build, beforeReveal }: BootOptions) => {
+  // Asked for right away, so it loads while the loader plays and the visitor picks a language.
+  const content = loadContent();
   mountLoader(app);
 
   // First visit: ask. Returning visitors get the language they chose before.
@@ -26,6 +29,8 @@ export const bootPage = async (app: HTMLElement, { build, beforeReveal }: BootOp
   }
   setLang(lang);
   labelLoader(app, tr('Chargement de la page', 'Loading the page'));
+
+  setContent(await content);
 
   build(app);
   mountHeader(app);
