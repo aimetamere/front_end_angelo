@@ -139,6 +139,7 @@ const renderForm = () => `
           <option value="dejeuner">${tr('Déjeuner', 'Lunch')}</option>
           <option value="diner">${tr('Dîner', 'Dinner')}</option>
           <option value="privatisation">${tr('Privatisation', 'Private hire')}</option>
+          <option value="traiteur">${tr('Service traiteur', 'Catering')}</option>
           <option value="autre">${tr('Autre', 'Other')}</option>
         </select>`,
       )}
@@ -447,8 +448,9 @@ const setupForm = (root: HTMLElement, reducedMotion: () => boolean) => {
     // The visitor sees the plane fly for at least its animation time, even if the API is quick.
     const data = new FormData(form);
     const value = (key: string) => String(data.get(key) ?? '').trim();
+    // Catering goes to its own board in the dashboard ("Devis traiteur").
     const [result] = await Promise.all([
-      submitForm('event_request', {
+      submitForm(value('occasion') === 'traiteur' ? 'catering_request' : 'event_request', {
         name: value('name'),
         phone: value('phone'),
         email: value('email'),
